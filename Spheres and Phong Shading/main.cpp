@@ -145,3 +145,78 @@ public:
 		return hit;
 	}
 };
+
+/**
+ Light class
+ */
+class Light{
+public:
+	glm::vec3 position; ///< Position of the light source
+	glm::vec3 color; ///< Color/intensity of the light source
+	Light(glm::vec3 position): position(position){
+		color = glm::vec3(1.0);
+	}
+	Light(glm::vec3 position, glm::vec3 color): position(position), color(color){
+	}
+};
+
+vector<Light *> lights; ///< A list of lights in the scene
+glm::vec3 ambient_light(0.1,0.1,0.1);
+vector<Object *> objects; ///< A list of all objects in the scene
+
+/** Function for computing color of an object according to the Phong Model
+ @param point A point belonging to the object for which the color is computed
+ @param normal A normal vector at the point
+ @param view_direction A normalized direction from the point to the viewer/camera
+ @param material A material structure representing the material of the object
+*/
+glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction, Material material){
+
+	glm::vec3 color(0.0);
+
+	glm::vec3 ambient_color = material.ambient;
+	glm::vec3 diffuse_color = material.diffuse;
+	glm::vec3 specular_color = material.specular;
+	float shininess = material.shininess;
+	glm::vec3 surface_normal = normal;
+	glm::vec3 view_vector = view_direction;
+
+	// Add ambient light before the per-light contributions.
+	glm::vec3 ambient_factor = ambient_light * ambient_color;
+
+	color += ambient_factor;
+
+	for(int light_index = 0; light_index < lights.size(); light_index++) {
+		Light* light = lights[light_index];
+		glm::vec3 light_color = light->color;
+		// The light color stores its intensity in each color channel.
+
+		// Calculate the diffuse contribution.
+		glm::vec3 to_light = light->position - point;
+		glm::vec3 light_direction = glm::normalize(to_light);
+
+		// Clamp the diffuse contribution when the light is behind the surface.
+		float cos_diffuse = glm::dot(light_direction,normal);
+		if(cos_diffuse < 0) {
+			cos_diffuse = 0;
+		}
+		glm::vec3 diffuse_factor = diffuse_color * cos_diffuse * light_color;
+
+		// Use the halfway direction for the specular highlight.
+		glm::vec3 half_vector = glm::normalize((glm::vec3(0.5, 0.5, 0.5)) * (light_direction + view_vector));
+		float normal_dot_half = glm::dot(half_vector, surface_normal);
+		float cos_specular = glm::pow(normal_dot_half, 4 * shininess);
+		if(cos_specular < 0) {
+			cos_specular = 0;
+		}
+		glm::vec3 specular_factor = specular_color * cos_specular * light_color;
+
+		color += diffuse_factor + specular_factor;
+
+	 }
+	
+	// The final color has to be clamped so the values do not go beyond 0 and 1.
+
+	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
+	return color;
+}
