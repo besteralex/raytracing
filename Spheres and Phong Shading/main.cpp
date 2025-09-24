@@ -220,3 +220,33 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
 	return color;
 }
+
+/**
+ Computes a color along the ray
+ @param ray Ray that should be traced through the scene
+ @return Color at the intersection point
+ */
+glm::vec3 trace_ray(Ray ray){
+
+	Hit closest_hit;
+
+	closest_hit.hit = false;
+	closest_hit.distance = INFINITY;
+
+	// Keep the closest intersection found along the ray.
+	for(int object_index = 0; object_index<objects.size(); object_index++){
+		Hit hit = objects[object_index]->intersect(ray);
+		if(hit.hit && hit.distance < closest_hit.distance)
+			closest_hit = hit;
+	}
+
+	glm::vec3 color(0.0);
+
+	if(closest_hit.hit) {
+
+		color = PhongModel(closest_hit.intersection, closest_hit.normal, glm::normalize(-ray.direction), closest_hit.object->getMaterial());
+	}else{
+		color = glm::vec3(0.0, 0.0, 0.0);
+	}
+	return color;
+}
