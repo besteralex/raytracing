@@ -250,3 +250,37 @@ glm::vec3 trace_ray(Ray ray){
 	}
 	return color;
 }
+/**
+ Function defining the scene
+ */
+void sceneDefinition () {
+
+    Material red_specular;
+
+	// Material settings for the red sphere.
+    red_specular.ambient = glm::vec3(0.01f, 0.03f, 0.03f);
+    red_specular.diffuse = glm::vec3(1.0f, 0.3f, 0.3f);
+    red_specular.specular = glm::vec3(0.5f, 0.5f, 0.5f);
+    red_specular.shininess = 10.0; // Controls the specular highlight.
+
+    Material green_specular;
+    green_specular.ambient = glm::vec3(0.07f, 0.09f, 0.07f);
+    green_specular.diffuse = glm::vec3(0.7f, 0.9f, 0.7f);
+    green_specular.specular = glm::vec3(0.0f, 0.0f, 0.0f);
+    green_specular.shininess = 0.0;
+
+	Material blue_specular;
+    blue_specular.ambient = glm::vec3(0.07f, 0.07f, 0.1f);
+    blue_specular.diffuse = glm::vec3(0.7f, 0.7f, 1.0f);
+    blue_specular.specular = glm::vec3(0.6f, 0.6f, 0.6f);
+    blue_specular.shininess = 100.0;
+
+	objects.push_back(new Sphere(1.0, glm::vec3(1.0, -2.0, 8.0), blue_specular));
+    objects.push_back(new Sphere(0.5, glm::vec3(-1.0, -2.5, 6.0), red_specular));
+    objects.push_back(new Sphere(1.0, glm::vec3(2.0, -2.0, 6.0), green_specular));
+
+	lights.push_back(new Light(glm::vec3(0.0, 26.0, 5.0), glm::vec3(0.4)));
+	lights.push_back(new Light(glm::vec3(0.0, 1.0, 12.0), glm::vec3(0.4)));
+	lights.push_back(new Light(glm::vec3(0.0, 5.0, 1.0), glm::vec3(0.4)));
+
+}
