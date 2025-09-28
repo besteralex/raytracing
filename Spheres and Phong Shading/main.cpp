@@ -284,3 +284,44 @@ void sceneDefinition () {
 	lights.push_back(new Light(glm::vec3(0.0, 5.0, 1.0), glm::vec3(0.4)));
 
 }
+
+int main(int argc, const char * argv[]) {
+
+    clock_t render_ticks = clock(); // Tracks rendering time.
+
+    int width = 1024; //width of the image
+    int height = 768; // height of the image
+    float field_of_view = 90; // Field of view in degrees.
+	sceneDefinition(); // Set up scene objects and lights.
+
+	Image image(width,height); // Create an image where we will store the result
+
+	glm::vec3 camera_origin = glm::vec3(0, 0, 0);
+	float pixel_size = 2.0f * glm::tan(glm::radians(field_of_view * 0.5f)) / width;
+	double image_left = (width * pixel_size) / 2 * (-1);
+	double image_top = (height * pixel_size) / 2;
+    for(int pixel_x = 0; pixel_x < width ; pixel_x++)
+        for(int pixel_y = 0; pixel_y < height ; pixel_y++){
+
+			// Aim each ray through the center of its pixel.
+			double ray_x = image_left + pixel_x * pixel_size + 0.5 * pixel_size;
+			double ray_y = image_top - pixel_y * pixel_size - 0.5 * pixel_size;
+			double ray_z = 1;
+			glm::vec3 unnormalized_direction = glm::vec3(ray_x, ray_y, ray_z);
+			glm::vec3 direction = glm::normalize(unnormalized_direction);
+			Ray ray(camera_origin, direction);
+			image.setPixel(pixel_x, pixel_y, trace_ray(ray));
+        }
+
+    render_ticks = clock() - render_ticks;
+    cout<<"It took " << ((float)render_ticks)/CLOCKS_PER_SEC<< " seconds to render the image."<< endl;
+    cout<<"I could render at "<< (float)CLOCKS_PER_SEC/((float)render_ticks) << " frames per second."<<endl;
+
+	// Save the image to the requested path, or use result.ppm.
+	if (argc == 2){
+		image.writeImage(argv[1]);
+	}else{
+		image.writeImage("./result.ppm");
+	}	
+    return 0;
+}
