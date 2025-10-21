@@ -180,3 +180,97 @@ public:
 		return hit;
 	}
 };
+
+class Triangle : public Object {
+	public:
+		glm::vec3 vertex_1;
+
+		glm::vec3 vertex_2;
+
+		glm::vec3 vertex_3;
+
+		glm::vec3 vertex_normal_1;
+		glm::vec3 vertex_normal_2;
+		glm::vec3 vertex_normal_3;
+		Material material;
+
+
+		Triangle(glm::vec3 vertex_1, glm::vec3 vertex_2, glm::vec3 vertex_3, glm::vec3 normal_at_vertex_1, glm::vec3 normal_at_vertex_2, glm::vec3 normal_at_vertex_3, Material material) {
+			this->vertex_1 = vertex_1;
+			this->vertex_2 = vertex_2;
+			this->vertex_3 = vertex_3;
+
+
+			this->vertex_normal_1 = normal_at_vertex_1;
+			this->vertex_normal_2 = normal_at_vertex_2;
+			this->vertex_normal_3 = normal_at_vertex_3;
+
+			this->material = material;
+		}
+
+		Triangle(glm::vec3 vertex_1, glm::vec3 vertex_2, glm::vec3 vertex_3) {
+			this->vertex_1 = vertex_1;
+			this->vertex_2 = vertex_2;
+			this->vertex_3 = vertex_3;
+
+			// Zero normals mark triangles that need a face normal.
+			this->vertex_normal_1 = glm::vec3(0.0f, 0.0f, 0.0f);
+			this->vertex_normal_2 = glm::vec3(0.0f, 0.0f, 0.0f);
+			this->vertex_normal_3 = glm::vec3(0.0f, 0.0f, 0.0f);
+		}
+
+
+		Hit intersect(Ray ray) {
+			Hit hit;
+			hit.hit = false;
+			
+
+			glm::vec3 plane_normal = glm::normalize(glm::cross(vertex_2 - vertex_1, vertex_3 - vertex_1));
+			Plane plane = Plane(vertex_1, plane_normal);
+			Hit plane_hit = plane.intersect(ray);
+
+
+			if(plane_hit.hit == false) {
+				return hit;
+			}
+			glm::vec3 intersection_point = plane_hit.intersection;
+			
+			
+			glm::vec3 triangle_area_normal = glm::cross(vertex_2 - vertex_1, vertex_3 - vertex_1);
+
+
+			glm::vec3 subtriangle_normal_1 = glm::cross(vertex_2 - intersection_point, vertex_3 - intersection_point);
+			glm::vec3 subtriangle_normal_2 = glm::cross(vertex_3 - intersection_point, vertex_1 - intersection_point);
+			glm::vec3 subtriangle_normal_3 = glm::cross(vertex_1 - intersection_point, vertex_2 - intersection_point);
+
+			// The three barycentric weights locate the hit within the triangle.
+			float weight_3 = glm::dot(triangle_area_normal, subtriangle_normal_3) / glm::dot(triangle_area_normal, triangle_area_normal);
+
+			float weight_1 = glm::dot(triangle_area_normal, subtriangle_normal_1) / glm::dot(triangle_area_normal, triangle_area_normal);
+
+			float weight_2 = glm::dot(triangle_area_normal, subtriangle_normal_2) / glm::dot(triangle_area_normal, triangle_area_normal);
+			
+			if(weight_1 >= 0.0f && weight_2 >= 0.0f && weight_3 >= 0.0f && weight_1 <= 1.0f && weight_2 <= 1.0f && weight_3 <= 1.0f) {
+				hit.hit = true;
+
+				hit.intersection = intersection_point;
+				hit.distance = plane_hit.distance;
+				
+				// Use face normals when the mesh has no vertex normals.
+
+				if(vertex_normal_1 == glm::vec3(0.0f, 0.0f, 0.0f)) {
+					vertex_normal_1 = glm::normalize(glm::cross(vertex_2 - vertex_1, vertex_3 - vertex_1));
+					vertex_normal_2 = glm::normalize(glm::cross(vertex_3 - vertex_2, vertex_1 - vertex_2));
+					vertex_normal_3 = glm::normalize(glm::cross(vertex_1 - vertex_3, vertex_2 - vertex_3));
+				}
+
+				// Blend the vertex normals using the same weights.
+				glm::vec3 interpolated_normal = weight_1 * vertex_normal_1 + weight_2 * vertex_normal_2 + weight_3 * vertex_normal_3;
+				interpolated_normal = glm::normalize(interpolated_normal);
+				hit.normal = interpolated_normal;
+				hit.object = this;
+			}
+			
+			return hit;
+		}
+};
