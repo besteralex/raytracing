@@ -274,3 +274,74 @@ class Triangle : public Object {
 			return hit;
 		}
 };
+
+
+
+
+class Cone : public Object{
+private:
+	Plane *plane;
+	
+public:
+	Cone(Material material){
+		this->material = material;
+		plane = new Plane(glm::vec3(0,1,0), glm::vec3(0.0,1,0));
+	}
+	
+	Hit intersect(Ray ray){
+		
+		Hit hit;
+		hit.hit = false;
+		
+		// Solve the intersection in the cone's local coordinate system.
+		glm::vec3 local_direction = inverseTransformationMatrix * glm::vec4(ray.direction, 0.0); //implicit cast to vec3
+		glm::vec3 local_origin = inverseTransformationMatrix * glm::vec4(ray.origin, 1.0); //implicit cast to vec3
+		local_direction = glm::normalize(local_direction);
+		
+		
+		float a = local_direction.x*local_direction.x + local_direction.z*local_direction.z - local_direction.y*local_direction.y;
+		float b = 2 * (local_direction.x * local_origin.x + local_direction.z * local_origin.z - local_direction.y * local_origin.y);
+		float c = local_origin.x * local_origin.x + local_origin.z * local_origin.z - local_origin.y * local_origin.y;
+		
+		float discriminant = b*b - 4 * a * c;
+		
+		if(discriminant < 0){
+			return hit;
+		}
+		
+		float first_root = (-b-sqrt(discriminant)) / (2*a);
+		float second_root = (-b+sqrt(discriminant)) / (2*a);
+		
+		float ray_distance = first_root;
+		hit.intersection = local_origin + ray_distance*local_direction;
+		if(ray_distance<0 || hit.intersection.y>1 || hit.intersection.y<0){
+			ray_distance = second_root;
+			hit.intersection = local_origin + ray_distance*local_direction;
+			if(ray_distance<0 || hit.intersection.y>1 || hit.intersection.y<0){
+				return hit;
+			}
+		};
+	
+		hit.normal = glm::vec3(hit.intersection.x, -hit.intersection.y, hit.intersection.z);
+		hit.normal = glm::normalize(hit.normal);
+	
+		
+		// Check whether the cap is closer than the side intersection.
+		Ray local_ray(local_origin,local_direction);
+		Hit cap_hit = plane->intersect(local_ray);
+		if(cap_hit.hit && cap_hit.distance < ray_distance && length(cap_hit.intersection - glm::vec3(0,1,0)) <= 1.0 ){
+			hit.intersection = cap_hit.intersection;
+			hit.normal = cap_hit.normal;
+		}
+		
+		hit.hit = true;
+		hit.object = this;
+		// Convert the hit point and normal back to world coordinates.
+		hit.intersection = transformationMatrix * glm::vec4(hit.intersection, 1.0); //implicit cast to vec3
+		hit.normal = (normalMatrix * glm::vec4(hit.normal, 0.0)); //implicit cast to vec3
+		hit.normal = glm::normalize(hit.normal);
+		hit.distance = glm::length(hit.intersection - ray.origin);
+		
+		return hit;
+	}
+};
