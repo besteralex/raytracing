@@ -345,3 +345,80 @@ public:
 		return hit;
 	}
 };
+
+/**
+ Light class
+ */
+class Light{
+public:
+	glm::vec3 position; ///< Position of the light source
+	glm::vec3 color; ///< Color/intensity of the light source
+	Light(glm::vec3 position): position(position){
+		color = glm::vec3(1.0);
+	}
+	Light(glm::vec3 position, glm::vec3 color): position(position), color(color){
+	}
+};
+
+vector<Light *> lights; ///< A list of lights in the scene
+// Ambient light used by the shading calculation.
+glm::vec3 ambient_light(0.001,0.001,0.001);
+vector<Object *> objects; ///< A list of all objects in the scene
+
+
+/** Function for computing color of an object according to the Phong Model
+ @param point A point belonging to the object for which the color is computed
+ @param normal A normal vector to the point
+ @param view_direction A normalized direction from the point to the viewer/camera
+ @param material A material structure representing the material of the object
+*/
+glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction, Material material){
+
+	glm::vec3 color(0.0);
+	for(int light_index = 0; light_index < lights.size(); light_index++){
+
+		glm::vec3 light_direction = glm::normalize(lights[light_index]->position - point);
+		glm::vec3 reflected_direction = glm::reflect(-light_direction, normal);
+
+		float normal_dot_light = glm::clamp(glm::dot(normal, light_direction), 0.0f, 1.0f);
+		float view_dot_reflection = glm::clamp(glm::dot(view_direction, reflected_direction), 0.0f, 1.0f);
+
+		glm::vec3 diffuse = material.diffuse * glm::vec3(normal_dot_light);
+		glm::vec3 specular = material.specular * glm::vec3(pow(view_dot_reflection, material.shininess));
+		
+        float light_distance = glm::distance(point,lights[light_index]->position);
+        light_distance = max(light_distance, 0.1f);
+        color += lights[light_index]->color * (diffuse + specular) / light_distance/light_distance;
+	}
+	color += ambient_light * material.ambient;
+	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
+	return color;
+}
+
+/**
+ Computes a color along the ray
+ @param ray Ray that should be traced through the scene
+ @return Color at the intersection point
+ */
+glm::vec3 trace_ray(Ray ray){
+
+	Hit closest_hit;
+
+	closest_hit.hit = false;
+	closest_hit.distance = INFINITY;
+
+	// Keep the closest intersection found along the ray.
+	for(int object_index = 0; object_index<objects.size(); object_index++){
+		Hit hit = objects[object_index]->intersect(ray);
+		if(hit.hit == true && hit.distance < closest_hit.distance)
+			closest_hit = hit;
+	}
+
+	glm::vec3 color(0.0);
+	if(closest_hit.hit){
+		color = PhongModel(closest_hit.intersection, closest_hit.normal, glm::normalize(-ray.direction), closest_hit.object->getMaterial());
+	}else{
+		color = glm::vec3(0.0, 0.0, 0.0);
+	}
+	return color;
+}
