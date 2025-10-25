@@ -422,3 +422,110 @@ glm::vec3 trace_ray(Ray ray){
 	}
 	return color;
 }
+
+
+/**
+ Function defining the scene
+ */
+void sceneDefinition (){
+
+	
+	Material green_diffuse;
+	green_diffuse.ambient = glm::vec3(0.7f, 0.9f, 0.7f);
+	green_diffuse.diffuse = glm::vec3(0.7f, 0.9f, 0.7f);
+
+	Material red_specular;
+	red_specular.ambient = glm::vec3(1.0f, 0.3f, 0.3f);
+	red_specular.diffuse = glm::vec3(1.0f, 0.3f, 0.3f);
+	red_specular.specular = glm::vec3(0.5);
+	red_specular.shininess = 10.0;
+
+	Material blue_specular;
+	blue_specular.ambient = glm::vec3(0.7f, 0.7f, 1.0f);
+	blue_specular.diffuse = glm::vec3(0.7f, 0.7f, 1.0f);
+	blue_specular.specular = glm::vec3(0.6);
+	blue_specular.shininess = 100.0;
+	
+	
+	green_diffuse.ambient = glm::vec3(0.03f, 0.1f, 0.03f);
+	green_diffuse.diffuse = glm::vec3(0.3f, 1.0f, 0.3f);
+
+	red_specular.diffuse = glm::vec3(1.0f, 0.2f, 0.2f);
+	red_specular.ambient = glm::vec3(0.01f, 0.02f, 0.02f);
+	red_specular.specular = glm::vec3(0.5);
+	red_specular.shininess = 10.0;
+
+	blue_specular.ambient = glm::vec3(0.02f, 0.02f, 0.1f);
+	blue_specular.diffuse = glm::vec3(0.2f, 0.2f, 1.0f);
+	blue_specular.specular = glm::vec3(0.6);
+	blue_specular.shininess = 100.0;
+
+	
+	lights.push_back(new Light(glm::vec3(0, 26, 5), glm::vec3(1.0, 1.0, 1.0)));
+	lights.push_back(new Light(glm::vec3(0, 1, 12), glm::vec3(0.1)));
+	lights.push_back(new Light(glm::vec3(0, 5, 1), glm::vec3(0.4)));
+	
+    Material red_diffuse;
+    red_diffuse.ambient = glm::vec3(0.09f, 0.06f, 0.06f);
+    red_diffuse.diffuse = glm::vec3(0.9f, 0.6f, 0.6f);
+        
+    Material blue_diffuse;
+    blue_diffuse.ambient = glm::vec3(0.06f, 0.06f, 0.09f);
+    blue_diffuse.diffuse = glm::vec3(0.6f, 0.6f, 0.9f);
+    objects.push_back(new Plane(glm::vec3(0,-3,0), glm::vec3(0.0,1,0)));
+    objects.push_back(new Plane(glm::vec3(0,1,30), glm::vec3(0.0,0.0,-1.0), green_diffuse));
+    objects.push_back(new Plane(glm::vec3(-15,1,0), glm::vec3(1.0,0.0,0.0), red_diffuse));
+    objects.push_back(new Plane(glm::vec3(15,1,0), glm::vec3(-1.0,0.0,0.0), blue_diffuse));
+    objects.push_back(new Plane(glm::vec3(0,27,0), glm::vec3(0.0,-1,0)));
+    objects.push_back(new Plane(glm::vec3(0,1,-0.01), glm::vec3(0.0,0.0,1.0), green_diffuse));
+	
+	
+
+	// Mesh files used by this scene.
+	Reader armadillo_reader = Reader("/Users/alexanderschramm/Downloads/assignment 3 cg/code/meshes/armadillo_with_normals.obj", true);
+	Reader icosphere_reader = Reader("/Users/alexanderschramm/Downloads/assignment 3 cg/code/meshes/ico.obj", false); // Mesh without vertex normals.
+
+	float mesh_scale = 1.2f;
+	glm::vec3 armadillo_offset = glm::vec3(-1.0f, -2.5f, 8.0f);
+	
+	
+	// Build triangles from the mesh positions and normal indices.
+	for(size_t face_index = 0; face_index < armadillo_reader.vertex_indices.size(); face_index++) {
+		int vertex_index_1 = armadillo_reader.vertex_indices[face_index].x;
+		int vertex_index_2 = armadillo_reader.vertex_indices[face_index].y;
+		int vertex_index_3 = armadillo_reader.vertex_indices[face_index].z;
+		int normal_index_1 = armadillo_reader.normal_indices[face_index].x;
+		int normal_index_2 = armadillo_reader.normal_indices[face_index].y;
+		int normal_index_3 = armadillo_reader.normal_indices[face_index].z;
+		
+		glm::vec3 vertex_1 = armadillo_reader.vertices[vertex_index_1] * mesh_scale + armadillo_offset;
+		glm::vec3 vertex_2 = armadillo_reader.vertices[vertex_index_2] * mesh_scale + armadillo_offset;
+		glm::vec3 vertex_3 = armadillo_reader.vertices[vertex_index_3] * mesh_scale + armadillo_offset;
+
+		Triangle* triangle = new Triangle(vertex_1, vertex_2, vertex_3, armadillo_reader.normals[normal_index_1], armadillo_reader.normals[normal_index_2], armadillo_reader.normals[normal_index_3], blue_diffuse);
+
+
+		objects.push_back(triangle);
+		
+	}
+	
+
+	glm::vec3 icosphere_offset = glm::vec3(3.0f, -2.5f, 8.5f);
+	// Build the second mesh using face normals.
+	for(size_t face_index = 0; face_index < icosphere_reader.vertex_indices.size(); face_index++) {
+		int vertex_index_1 = icosphere_reader.vertex_indices[face_index].x;
+		int vertex_index_2 = icosphere_reader.vertex_indices[face_index].y;
+		int vertex_index_3 = icosphere_reader.vertex_indices[face_index].z;
+		
+		glm::vec3 vertex_1 = icosphere_reader.vertices[vertex_index_1] * mesh_scale + icosphere_offset;
+		glm::vec3 vertex_2 = icosphere_reader.vertices[vertex_index_2] * mesh_scale + icosphere_offset;
+		glm::vec3 vertex_3 = icosphere_reader.vertices[vertex_index_3] * mesh_scale + icosphere_offset;
+
+		Triangle* triangle = new Triangle(vertex_1, vertex_2, vertex_3);
+
+
+		objects.push_back(triangle);
+		
+	}
+	
+}
