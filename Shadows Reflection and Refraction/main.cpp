@@ -248,3 +248,41 @@ public:
 		return hit;
 	}
 };
+
+/**
+ Light class
+ */
+class Light{
+public:
+	glm::vec3 position; ///< Position of the light source
+	glm::vec3 color; ///< Color/intensity of the light source
+	Light(glm::vec3 position): position(position){
+		color = glm::vec3(1.0);
+	}
+	Light(glm::vec3 position, glm::vec3 color): position(position), color(color){
+	}
+};
+
+vector<Light *> lights; ///< A list of lights in the scene
+// Ambient light used by the shading calculation.
+glm::vec3 ambient_light(0.001,0.001,0.001);
+vector<Object *> objects; ///< A list of all objects in the scene
+
+
+// Return 1 when the light is visible from the surface point, or 0 when blocked.
+
+
+int calc_light_s(Light* light, glm::vec3 point) {
+	// Cast a ray from the surface toward the light.
+	glm::vec3 light_direction = glm::normalize(light->position - point);
+	Ray ray_from_point_to_light = Ray(point, light_direction);
+
+	for(int object_index = 0; object_index<objects.size(); object_index++){
+		Hit hit = objects[object_index]->intersect(ray_from_point_to_light);
+		if(hit.hit && hit.distance < glm::distance(point, light->position) && hit.distance > 0.0001) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
