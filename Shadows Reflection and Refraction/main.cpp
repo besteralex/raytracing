@@ -286,3 +286,63 @@ int calc_light_s(Light* light, glm::vec3 point) {
 
 	return 1;
 }
+
+glm::vec3 trace_ray(Ray ray, int reflection_depth, int refraction_depth);
+
+// Compute the surface color from direct lighting.
+glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction, Material material, int reflection_depth, int refraction_depth){
+
+	glm::vec3 color(0.0);
+	for (int light_index = 0; light_index < lights.size(); light_index++){
+
+		glm::vec3 light_direction = glm::normalize(lights[light_index]->position - point);
+		glm::vec3 reflected_direction = glm::reflect(-light_direction, normal);
+
+		float normal_dot_light = glm::clamp(glm::dot(normal, light_direction), 0.0f, 1.0f);
+		float view_dot_reflection = glm::clamp(glm::dot(view_direction, reflected_direction), 0.0f, 1.0f);
+
+		glm::vec3 diffuse_color = material.diffuse;
+		glm::vec3 diffuse = diffuse_color * glm::vec3(normal_dot_light);
+		glm::vec3 specular = material.specular * glm::vec3(pow(view_dot_reflection, material.shininess));
+		
+        float light_distance = glm::distance(point,lights[light_index]->position);
+        light_distance = max(light_distance, 0.1f);
+		// Only add direct light when the shadow ray is clear.
+        color +=  glm::vec3(calc_light_s(lights[light_index], point)) * (lights[light_index]->color * (diffuse + specular)) / light_distance/light_distance;
+	}
+	
+	
+
+	color += ambient_light * material.ambient;
+	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
+	return color;
+}
+
+/**
+ Computes a color along the ray
+ @param ray Ray that should be traced through the scene
+ @return Color at the intersection point
+ */
+
+
+glm::vec3 trace_ray(Ray ray, int reflection_depth, int refraction_depth){
+
+	Hit closest_hit;
+
+	closest_hit.hit = false;
+	closest_hit.distance = INFINITY;
+
+	for(int object_index = 0; object_index<objects.size(); object_index++){
+		Hit hit = objects[object_index]->intersect(ray);
+		if(hit.hit == true && hit.distance < closest_hit.distance)
+			closest_hit = hit;
+	}
+
+	glm::vec3 color(0.0);
+	if(closest_hit.hit){
+		color = PhongModel(closest_hit.intersection, closest_hit.normal, glm::normalize(-ray.direction), closest_hit.object->getMaterial(), reflection_depth, refraction_depth);
+	}else{
+		color = glm::vec3(0.0, 0.0, 0.0);
+	}
+	return color;
+}
