@@ -289,11 +289,12 @@ int calc_light_s(Light* light, glm::vec3 point) {
 
 glm::vec3 trace_ray(Ray ray, int reflection_depth, int refraction_depth);
 
-// Combine direct lighting with reflected rays.
+// Combine direct lighting with reflected and refracted rays.
 glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction, Material material, int reflection_depth, int refraction_depth){
 
 	glm::vec3 color(0.0);
 	glm::vec3 reflected_color(0.0);
+	glm::vec3 refracted_color(0.0);
 	for (int light_index = 0; light_index < lights.size(); light_index++){
 
 		glm::vec3 light_direction = glm::normalize(lights[light_index]->position - point);
@@ -330,8 +331,42 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
 	reflected_color = glm::clamp(reflected_color, glm::vec3(0.0), glm::vec3(1.0));
 
+	glm::vec3 normal_component = normal * glm::dot(normal, incident_direction);
+	glm::vec3 tangent_component = incident_direction - normal_component;
+	
+	float incident_ior = 1.0;
+	float transmitted_ior = material.refractive_index;
+	float cos_incident_angle = glm::dot(incident_direction, normal);
+	// Swap the refractive indices when the ray leaves the material.
+	if(cos_incident_angle > 0) {
+		incident_ior = material.refractive_index;
+		transmitted_ior = 1.0;
+	} else {
+		incident_ior = 1.0;
+		transmitted_ior = material.refractive_index;
+	}
+
+	cos_incident_angle = glm::abs(cos_incident_angle);
+	float incident_angle = acos(glm::clamp(cos_incident_angle, 0.0f, 1.0f));
+	float sin_incident_angle = sin(incident_angle);
+	
+	float ior_ratio = incident_ior / transmitted_ior;
+	float normal_scale = glm::sqrt(1 + (1 - glm::pow(ior_ratio, 2)) * ((glm::pow(glm::length(tangent_component), 2) / glm::pow(glm::length(normal_component), 2))));
+	glm::vec3 refraction_direction = glm::vec3(normal_scale) * normal_component + ior_ratio * tangent_component;
+	Ray refraction_ray = Ray(point + refraction_direction * 1e-4f, glm::normalize(refraction_direction));
+
+	// Track refraction depth separately from reflection depth.
+	if(material.does_refract && refraction_depth < 10) {
+		refracted_color = trace_ray(refraction_ray, reflection_depth, refraction_depth + 1);
+	} else {
+		refracted_color = glm::vec3(0.0f);
+	}
+
 	if(material.does_reflect) {
 		return reflected_color;
+	}
+	if(material.does_refract) {
+		return refracted_color;
 	}
 	return color;
 }
