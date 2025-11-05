@@ -289,10 +289,11 @@ int calc_light_s(Light* light, glm::vec3 point) {
 
 glm::vec3 trace_ray(Ray ray, int reflection_depth, int refraction_depth);
 
-// Compute the surface color from direct lighting.
+// Combine direct lighting with reflected rays.
 glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction, Material material, int reflection_depth, int refraction_depth){
 
 	glm::vec3 color(0.0);
+	glm::vec3 reflected_color(0.0);
 	for (int light_index = 0; light_index < lights.size(); light_index++){
 
 		glm::vec3 light_direction = glm::normalize(lights[light_index]->position - point);
@@ -310,11 +311,28 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 		// Only add direct light when the shadow ray is clear.
         color +=  glm::vec3(calc_light_s(lights[light_index], point)) * (lights[light_index]->color * (diffuse + specular)) / light_distance/light_distance;
 	}
+
+	glm::vec3 incident_direction = -view_direction;
+	incident_direction = glm::normalize(incident_direction);
+	glm::vec3 reflection_direction = glm::reflect(glm::normalize(incident_direction), normal);
+	// Offset the reflected ray to avoid hitting the same surface again.
+	Ray reflection_ray = Ray(point + reflection_direction * 1e-4f, reflection_direction);
+
+	if(material.does_reflect && reflection_depth < 10) {
+		reflected_color = trace_ray(reflection_ray, reflection_depth + 1, refraction_depth);
+	} else {
+		reflected_color = glm::vec3(0.0);
+	}
 	
 	
 
 	color += ambient_light * material.ambient;
 	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
+	reflected_color = glm::clamp(reflected_color, glm::vec3(0.0), glm::vec3(1.0));
+
+	if(material.does_reflect) {
+		return reflected_color;
+	}
 	return color;
 }
 
