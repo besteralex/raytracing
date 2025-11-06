@@ -289,10 +289,12 @@ int calc_light_s(Light* light, glm::vec3 point) {
 
 glm::vec3 trace_ray(Ray ray, int reflection_depth, int refraction_depth);
 
-// Compute the surface color from direct lighting.
+// Combine direct lighting with reflected and refracted rays.
 glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction, Material material, int reflection_depth, int refraction_depth){
 
 	glm::vec3 color(0.0);
+	glm::vec3 reflected_color(0.0);
+	glm::vec3 refracted_color(0.0);
 	for (int light_index = 0; light_index < lights.size(); light_index++){
 
 		glm::vec3 light_direction = glm::normalize(lights[light_index]->position - point);
@@ -310,11 +312,82 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 		// Only add direct light when the shadow ray is clear.
         color +=  glm::vec3(calc_light_s(lights[light_index], point)) * (lights[light_index]->color * (diffuse + specular)) / light_distance/light_distance;
 	}
+
+	glm::vec3 incident_direction = -view_direction;
+	incident_direction = glm::normalize(incident_direction);
+	glm::vec3 reflection_direction = glm::reflect(glm::normalize(incident_direction), normal);
+	// Offset the reflected ray to avoid hitting the same surface again.
+	Ray reflection_ray = Ray(point + reflection_direction * 1e-4f, reflection_direction);
+
+	if(material.does_reflect && reflection_depth < 10) {
+		reflected_color = trace_ray(reflection_ray, reflection_depth + 1, refraction_depth);
+	} else {
+		reflected_color = glm::vec3(0.0);
+	}
 	
 	
 
 	color += ambient_light * material.ambient;
 	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
+	reflected_color = glm::clamp(reflected_color, glm::vec3(0.0), glm::vec3(1.0));
+
+	glm::vec3 normal_component = normal * glm::dot(normal, incident_direction);
+	glm::vec3 tangent_component = incident_direction - normal_component;
+	
+	float incident_ior = 1.0;
+	float transmitted_ior = material.refractive_index;
+	float cos_incident_angle = glm::dot(incident_direction, normal);
+	// Swap the refractive indices when the ray leaves the material.
+	if(cos_incident_angle > 0) {
+		incident_ior = material.refractive_index;
+		transmitted_ior = 1.0;
+	} else {
+		incident_ior = 1.0;
+		transmitted_ior = material.refractive_index;
+	}
+
+	cos_incident_angle = glm::abs(cos_incident_angle);
+	float incident_angle = acos(glm::clamp(cos_incident_angle, 0.0f, 1.0f));
+	float sin_incident_angle = sin(incident_angle);
+	
+	float sin_transmitted_angle = incident_ior / transmitted_ior * sin_incident_angle;
+	float transmitted_angle = asin(sin_transmitted_angle);
+	float cos_transmitted_angle = cos(transmitted_angle);
+
+	float fresnel_term_1 = (incident_ior * cos_incident_angle - transmitted_ior * cos_transmitted_angle) / (incident_ior * cos_incident_angle + transmitted_ior * cos_transmitted_angle);
+	float fresnel_term_2 = (incident_ior * cos_transmitted_angle - transmitted_ior * cos_incident_angle) / (incident_ior * cos_transmitted_angle + transmitted_ior * cos_incident_angle);
+
+	// Average the two Fresnel terms to determine the reflection weight.
+	float reflectance = 0.5 * (glm::pow(fresnel_term_1, 2) + glm::pow(fresnel_term_2, 2));
+
+	// Use full reflection when the refraction condition is not met.
+	if(glm::abs(incident_ior / transmitted_ior * sin(incident_angle)) >= 1) {
+		reflectance = 1.0f;
+	} 
+
+	float ior_ratio = incident_ior / transmitted_ior;
+	float normal_scale = glm::sqrt(1 + (1 - glm::pow(ior_ratio, 2)) * ((glm::pow(glm::length(tangent_component), 2) / glm::pow(glm::length(normal_component), 2))));
+	glm::vec3 refraction_direction = glm::vec3(normal_scale) * normal_component + ior_ratio * tangent_component;
+	Ray refraction_ray = Ray(point + refraction_direction * 1e-4f, glm::normalize(refraction_direction));
+
+	// Track refraction depth separately from reflection depth.
+	if(material.does_refract && refraction_depth < 10) {
+		refracted_color = trace_ray(refraction_ray, reflection_depth, refraction_depth + 1);
+	} else {
+		refracted_color = glm::vec3(0.0f);
+	}
+
+
+	if(material.does_reflect && material.does_refract) {
+		return reflected_color * (reflectance) + refracted_color * ((1 - reflectance));
+	}
+
+	if(material.does_reflect) {
+		return reflected_color;
+	}
+	if(material.does_refract) {
+		return refracted_color;
+	}
 	return color;
 }
 
