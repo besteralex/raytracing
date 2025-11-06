@@ -350,6 +350,21 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 	float incident_angle = acos(glm::clamp(cos_incident_angle, 0.0f, 1.0f));
 	float sin_incident_angle = sin(incident_angle);
 	
+	float sin_transmitted_angle = incident_ior / transmitted_ior * sin_incident_angle;
+	float transmitted_angle = asin(sin_transmitted_angle);
+	float cos_transmitted_angle = cos(transmitted_angle);
+
+	float fresnel_term_1 = (incident_ior * cos_incident_angle - transmitted_ior * cos_transmitted_angle) / (incident_ior * cos_incident_angle + transmitted_ior * cos_transmitted_angle);
+	float fresnel_term_2 = (incident_ior * cos_transmitted_angle - transmitted_ior * cos_incident_angle) / (incident_ior * cos_transmitted_angle + transmitted_ior * cos_incident_angle);
+
+	// Average the two Fresnel terms to determine the reflection weight.
+	float reflectance = 0.5 * (glm::pow(fresnel_term_1, 2) + glm::pow(fresnel_term_2, 2));
+
+	// Use full reflection when the refraction condition is not met.
+	if(glm::abs(incident_ior / transmitted_ior * sin(incident_angle)) >= 1) {
+		reflectance = 1.0f;
+	} 
+
 	float ior_ratio = incident_ior / transmitted_ior;
 	float normal_scale = glm::sqrt(1 + (1 - glm::pow(ior_ratio, 2)) * ((glm::pow(glm::length(tangent_component), 2) / glm::pow(glm::length(normal_component), 2))));
 	glm::vec3 refraction_direction = glm::vec3(normal_scale) * normal_component + ior_ratio * tangent_component;
@@ -360,6 +375,11 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 		refracted_color = trace_ray(refraction_ray, reflection_depth, refraction_depth + 1);
 	} else {
 		refracted_color = glm::vec3(0.0f);
+	}
+
+
+	if(material.does_reflect && material.does_refract) {
+		return reflected_color * (reflectance) + refracted_color * ((1 - reflectance));
 	}
 
 	if(material.does_reflect) {
