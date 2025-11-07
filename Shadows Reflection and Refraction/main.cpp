@@ -419,3 +419,100 @@ glm::vec3 trace_ray(Ray ray, int reflection_depth, int refraction_depth){
 	}
 	return color;
 }
+/**
+ Function defining the scene
+ */
+void sceneDefinition (){
+	
+	Material green_diffuse;
+	green_diffuse.ambient = glm::vec3(0.7f, 0.9f, 0.7f);
+	green_diffuse.diffuse = glm::vec3(0.7f, 0.9f, 0.7f);
+
+	Material red_specular;
+	red_specular.ambient = glm::vec3(1.0f, 0.3f, 0.3f);
+	red_specular.diffuse = glm::vec3(1.0f, 0.3f, 0.3f);
+	red_specular.specular = glm::vec3(0.5);
+	red_specular.shininess = 10.0;
+
+	Material blue_specular;
+	blue_specular.ambient = glm::vec3(0.7f, 0.7f, 1.0f);
+	blue_specular.diffuse = glm::vec3(0.7f, 0.7f, 1.0f);
+	blue_specular.specular = glm::vec3(0.6);
+	blue_specular.shininess = 100.0;
+
+	Material green_refractive;
+	green_refractive.ambient = glm::vec3(0.03f, 0.1f, 0.03f);
+	green_refractive.diffuse = glm::vec3(0.3f, 1.0f, 0.3f);
+	green_refractive.does_refract = true;
+	green_refractive.does_reflect = true;
+	green_refractive.refractive_index = 2.0f;
+	
+	
+	green_diffuse.ambient = glm::vec3(0.03f, 0.1f, 0.03f);
+	green_diffuse.diffuse = glm::vec3(0.3f, 1.0f, 0.3f);
+
+	red_specular.diffuse = glm::vec3(1.0f, 0.2f, 0.2f);
+	red_specular.ambient = glm::vec3(0.01f, 0.02f, 0.02f);
+	red_specular.specular = glm::vec3(0.5);
+	red_specular.shininess = 10.0;
+
+	blue_specular.ambient = glm::vec3(0.02f, 0.02f, 0.1f);
+	blue_specular.diffuse = glm::vec3(0.2f, 0.2f, 1.0f);
+	blue_specular.specular = glm::vec3(0.6);
+	blue_specular.shininess = 100.0;
+
+	blue_specular.does_reflect = true;
+
+	objects.push_back(new Sphere(1.0, glm::vec3(1,-2,8), blue_specular));
+	objects.push_back(new Sphere(0.5, glm::vec3(-1,-2.5,6), red_specular));
+	objects.push_back(new Sphere(2.0, glm::vec3(-3,-1,8), green_refractive));
+
+	
+	lights.push_back(new Light(glm::vec3(0, 26, 5), glm::vec3(1.0, 1.0, 1.0)));
+	lights.push_back(new Light(glm::vec3(0, 1, 12), glm::vec3(0.1)));
+	lights.push_back(new Light(glm::vec3(0, 5, 1), glm::vec3(0.4)));
+	
+    Material red_diffuse;
+    red_diffuse.ambient = glm::vec3(0.09f, 0.06f, 0.06f);
+    red_diffuse.diffuse = glm::vec3(0.9f, 0.6f, 0.6f);
+        
+    Material blue_diffuse;
+
+    blue_diffuse.ambient = glm::vec3(0.06f, 0.06f, 0.09f);
+    blue_diffuse.diffuse = glm::vec3(0.6f, 0.6f, 0.9f);
+    objects.push_back(new Plane(glm::vec3(0,-3,0), glm::vec3(0.0,1,0)));
+    objects.push_back(new Plane(glm::vec3(0,1,30), glm::vec3(0.0,0.0,-1.0), green_diffuse));
+    objects.push_back(new Plane(glm::vec3(-15,1,0), glm::vec3(1.0,0.0,0.0), red_diffuse));
+    objects.push_back(new Plane(glm::vec3(15,1,0), glm::vec3(-1.0,0.0,0.0), blue_diffuse));
+    objects.push_back(new Plane(glm::vec3(0,27,0), glm::vec3(0.0,-1,0)));
+    objects.push_back(new Plane(glm::vec3(0,1,-0.01), glm::vec3(0.0,0.0,1.0), green_diffuse));
+	
+	
+	
+	// Cones
+	Material yellow_specular;
+	yellow_specular.ambient = glm::vec3(0.1f, 0.10f, 0.0f);
+	yellow_specular.diffuse = glm::vec3(0.4f, 0.4f, 0.0f);
+	yellow_specular.specular = glm::vec3(1.0);
+	yellow_specular.shininess = 100.0;
+	
+	Cone *cone = new Cone(yellow_specular);
+	glm::mat4 translationMatrix = glm::translate(glm::vec3(5,9,14));
+	glm::mat4 scalingMatrix = glm::scale(glm::vec3(3.0f, 12.0f, 3.0f));
+	glm::mat4 rotationMatrix = glm::rotate(glm::radians(180.0f) , glm::vec3(1,0,0));
+	cone->setTransformation(translationMatrix*scalingMatrix*rotationMatrix);
+	objects.push_back(cone);
+	
+	Cone *cone2 = new Cone(green_diffuse);
+	translationMatrix = glm::translate(glm::vec3(6,-3,7));
+	scalingMatrix = glm::scale(glm::vec3(1.0f, 3.0f, 1.0f));
+	rotationMatrix = glm::rotate(glm::atan(3.0f), glm::vec3(0,0,1));
+	cone2->setTransformation(translationMatrix* rotationMatrix*scalingMatrix);
+	objects.push_back(cone2);
+	
+}
+glm::vec3 toneMapping(glm::vec3 intensity){
+	float gamma = 1.0/2.0;
+	float alpha = 12.0f;
+	return glm::clamp(alpha * glm::pow(intensity, glm::vec3(gamma)), glm::vec3(0.0), glm::vec3(1.0));
+}
