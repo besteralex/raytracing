@@ -516,3 +516,53 @@ glm::vec3 toneMapping(glm::vec3 intensity){
 	float alpha = 12.0f;
 	return glm::clamp(alpha * glm::pow(intensity, glm::vec3(gamma)), glm::vec3(0.0), glm::vec3(1.0));
 }
+
+
+
+int main(int argc, const char * argv[]) {
+
+    clock_t render_ticks = clock(); // Tracks rendering time.
+
+    int width = 1024; //width of the image
+    int height = 768; // height of the image
+    float field_of_view = 90; // field of view
+
+	sceneDefinition(); // Set up scene objects and lights.
+
+	Image image(width,height); // Create an image where we will store the result
+	vector<glm::vec3> image_values(width*height);
+
+    float pixel_size = 2*tan(0.5*field_of_view/180*M_PI)/width;
+    float image_left = -pixel_size * width / 2;
+    float image_top = pixel_size * height / 2;
+
+    for(int pixel_x = 0; pixel_x < width ; pixel_x++)
+        for(int pixel_y = 0; pixel_y < height ; pixel_y++){
+
+			// Aim each ray through the center of its pixel.
+			float ray_x = image_left + pixel_x*pixel_size + pixel_size/2;
+            float ray_y = image_top - pixel_y*pixel_size - pixel_size/2;
+            float ray_z = 1;
+
+			glm::vec3 camera_origin(0, 0, 0);
+            glm::vec3 direction(ray_x, ray_y, ray_z);
+            direction = glm::normalize(direction);
+
+            Ray ray(camera_origin, direction);
+            image.setPixel(pixel_x, pixel_y, toneMapping(trace_ray(ray, 0, 0)));
+        }
+	
+    render_ticks = clock() - render_ticks;
+    cout<<"It took " << ((float)render_ticks)/CLOCKS_PER_SEC<< " seconds to render the image."<< endl;
+    cout<<"I could render at "<< (float)CLOCKS_PER_SEC/((float)render_ticks) << " frames per second."<<endl;
+
+	// Save the image to the requested path, or use result.ppm.
+	if (argc == 2){
+		image.writeImage(argv[1]);
+	}else{
+		image.writeImage("./result.ppm");
+	}
+
+	
+    return 0;
+}
