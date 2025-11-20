@@ -275,4 +275,90 @@ class Triangle : public Object {
 		glm::vec3 get_center() {
 			return (vertex_1 + vertex_2 + vertex_3) / 3.0f;
 		}
+}; 
+
+
+class AABB : public Object {
+	public:
+		glm::vec3 min;
+		glm::vec3 max;
+		glm::vec3 center;
+
+		AABB() {
+			min = glm::vec3(INFINITY);
+			max = glm::vec3(-INFINITY);
+			center = glm::vec3(0.0f);
+		}
+
+		void include_vec_3(glm::vec3 point) {
+			min.x = glm::min(point.x, min.x);
+			min.y = glm::min(point.y, min.y);
+			min.z = glm::min(point.z, min.z);
+			max.x = glm::max(point.x, max.x);
+			max.y = glm::max(point.y, max.y);
+			max.z = glm::max(point.z, max.z);
+			center = (min + max) * 0.5f;
+		}
+
+		void include_triangle(Triangle triangle) {
+			include_vec_3(triangle.vertex_1);
+			include_vec_3(triangle.vertex_2);
+			include_vec_3(triangle.vertex_3);
+		}
+
+
+		Hit intersect(Ray ray) {
+			Hit hit;
+			hit.hit = false;
+			float interval_near = -INFINITY;
+			float interval_far = INFINITY;
+			// Each axis narrows the interval where the ray is inside the box.
+			for(int axis_index = 0; axis_index < 3; axis_index++) {
+				float first_distance = (min[axis_index] - ray.origin[axis_index]) / ray.direction[axis_index];
+				float second_distance = (max[axis_index] - ray.origin[axis_index]) / ray.direction[axis_index];
+				float axis_near = glm::min(first_distance, second_distance);
+				float axis_far = glm::max(first_distance, second_distance);
+				interval_near = glm::max(interval_near, axis_near);
+				interval_far = glm::min(interval_far, axis_far);
+			}
+
+			if(interval_near < interval_far ) {
+				if(interval_far > 0.0f) {
+					if(interval_near > interval_far) {
+						return hit;
+					}
+					float distance = 0.0f;
+					if(interval_near > 0.0f) {
+						distance = interval_near;
+					} else {
+						distance = interval_far;
+					}
+					hit.hit = true;
+					hit.distance = distance;
+					hit.object = this;
+					hit.normal = glm::vec3(0.0f);
+					hit.intersection = ray.origin + distance * ray.direction;
+					return hit;
+				}
+			}
+			return hit;
+		}
 };
+
+
+
+class Node {
+	public:
+		AABB box;
+		vector<Triangle> triangles;
+		Node* child_left;
+		Node* child_right;
+
+		Node() {
+			child_left = nullptr;
+			child_right = nullptr;
+		}
+};
+
+
+void split(Node* parent, int depth);
