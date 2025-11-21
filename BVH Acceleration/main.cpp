@@ -362,3 +362,46 @@ class Node {
 
 
 void split(Node* parent, int depth);
+
+// Build the root box before splitting the triangle list.
+Node init_bhv(vector<Triangle> triangles) {
+	AABB box = AABB(); 
+	for(int triangle_index = 0; triangle_index < triangles.size(); triangle_index++) {
+		Triangle triangle = triangles[triangle_index];
+		box.include_triangle(triangle);
+	}
+	Node root = Node();
+	root.box = box;
+	root.triangles = triangles;
+	split(&root, 0);
+	return root;
+}
+
+void split(Node* parent, int depth) {
+	// Stop at the depth limit or when only a few triangles remain.
+	if(depth >= 40 || parent->triangles.size() < 4) {
+		return;
+	}
+
+	Node* left_child = new Node();
+	Node* right_child = new Node();
+
+	// Cycle through x, y, and z when choosing the split axis.
+	int axis_index = depth % 3;
+
+	for(int triangle_index = 0; triangle_index < parent->triangles.size(); triangle_index++) {
+		Triangle triangle = parent->triangles[triangle_index];
+		if(triangle.get_center()[axis_index] < parent->box.center[axis_index]) {
+			left_child->triangles.push_back(triangle);
+			left_child->box.include_triangle(triangle);
+		} else {
+			right_child->triangles.push_back(triangle);
+			right_child->box.include_triangle(triangle);
+		}
+	}
+
+	parent->child_left = left_child;
+	parent->child_right = right_child;
+	split(parent->child_left, depth + 1);
+	split(parent->child_right, depth + 1);
+}
