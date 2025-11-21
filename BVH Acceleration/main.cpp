@@ -405,3 +405,27 @@ void split(Node* parent, int depth) {
 	split(parent->child_left, depth + 1);
 	split(parent->child_right, depth + 1);
 }
+
+Hit traverse(Ray ray, Node* node, Hit best_hit) {
+	// Skip subtrees whose bounding box is not hit by the ray.
+	Hit box_hit = node->box.intersect(ray);
+	if(box_hit.hit == true) {
+		// Check triangles directly when this node is a leaf.
+		if(node->child_left == nullptr && node->child_right == nullptr) {
+			float best_distance = INFINITY;
+			for(int triangle_index = 0; triangle_index < node->triangles.size(); triangle_index++) {
+				Hit triangle_hit = node->triangles[triangle_index].intersect(ray);
+				if(triangle_hit.hit == true && triangle_hit.distance < best_distance) {
+					best_distance = triangle_hit.distance;
+					best_hit = triangle_hit;
+				}
+			}
+			return best_hit;
+		} else {
+			best_hit = traverse(ray, node->child_left, best_hit);
+			best_hit = traverse(ray, node->child_right, best_hit);
+			return best_hit;
+		}
+	}
+	return best_hit;
+}
