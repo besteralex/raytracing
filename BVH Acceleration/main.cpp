@@ -429,3 +429,73 @@ Hit traverse(Ray ray, Node* node, Hit best_hit) {
 	}
 	return best_hit;
 }
+/**
+ Light class
+ */
+class Light{
+public:
+	glm::vec3 position; ///< Position of the light source
+	glm::vec3 color; ///< Color/intensity of the light source
+	Light(glm::vec3 position): position(position){
+		color = glm::vec3(1.0);
+	}
+	Light(glm::vec3 position, glm::vec3 color): position(position), color(color){
+	}
+};
+
+vector<Light *> lights; ///< A list of lights in the scene
+// Ambient light used by the shading calculation.
+glm::vec3 ambient_light(0.001,0.001,0.001);
+vector<Object *> objects; ///< A list of all objects in the scene
+vector<Triangle> triangles;
+Node bvh_root;
+
+
+
+/** Function for computing color of an object according to the Phong Model
+ @param point A point belonging to the object for which the color is computed
+ @param normal A normal vector to the point
+ @param view_direction A normalized direction from the point to the viewer/camera
+ @param material A material structure representing the material of the object
+*/
+
+int calc_light_s(Light* light, glm::vec3 point, glm::vec3 normal) {
+	glm::vec3 start = point + normal * 0.001f;
+	glm::vec3 light_direction = glm::normalize(light->position - start);
+	float max_distance = glm::distance(light->position, start);
+	Ray ray_from_point_to_light(start, light_direction);
+
+	Hit best_hit;
+	best_hit.hit = false;
+	best_hit.distance = INFINITY;
+	Hit triangle_hit = traverse(ray_from_point_to_light, &bvh_root, best_hit);
+	if(triangle_hit.hit && triangle_hit.distance > 0.0001f && triangle_hit.distance < max_distance) {
+		return 0;
+	}
+
+	return 1;
+}
+
+glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction, Material material){
+
+	glm::vec3 color(0.0);
+	for(int light_index = 0; light_index < lights.size(); light_index++){
+
+		glm::vec3 light_direction = glm::normalize(lights[light_index]->position - point);
+		glm::vec3 reflected_direction = glm::reflect(-light_direction, normal);
+
+		float normal_dot_light = glm::clamp(glm::dot(normal, light_direction), 0.0f, 1.0f);
+		float view_dot_reflection = glm::clamp(glm::dot(view_direction, reflected_direction), 0.0f, 1.0f);
+
+		glm::vec3 diffuse = material.diffuse * glm::vec3(normal_dot_light);
+		glm::vec3 specular = material.specular * glm::vec3(pow(view_dot_reflection, material.shininess));
+		
+        float light_distance = glm::distance(point,lights[light_index]->position);
+        light_distance = max(light_distance, 0.1f);
+		//int light_visible = calc_light_s(lights[light_num], point, normal);
+        color +=  (lights[light_index]->color * (diffuse + specular)) / light_distance/light_distance;
+	}
+	color += ambient_light * material.ambient;
+	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
+	return color;
+}
