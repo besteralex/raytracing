@@ -499,3 +499,41 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
 	return color;
 }
+
+// Rotate a vector around the Y axis by angle radians
+glm::vec3 rotateY(const glm::vec3& vector, float angle_rad){
+	float cos_angle = cosf(angle_rad);
+	float sin_angle = sinf(angle_rad);
+	return glm::vec3(cos_angle * vector.x + sin_angle * vector.z, vector.y, -sin_angle * vector.x + cos_angle * vector.z);
+}
+
+/**
+ Computes a color along the ray
+ @param ray Ray that should be traced through the scene
+ @return Color at the intersection point
+ */
+glm::vec3 trace_ray(Ray ray){
+
+	Hit closest_hit;
+	closest_hit.hit = false;
+	closest_hit.distance = INFINITY;
+	closest_hit = traverse(ray, &bvh_root, closest_hit);
+
+	if(closest_hit.hit == false) {
+		for(size_t object_index = 0; object_index < objects.size(); object_index++){
+			Hit hit = objects[object_index]->intersect(ray);
+			if(hit.hit == true && hit.distance < closest_hit.distance){
+				closest_hit = hit;
+			}
+		}
+	}
+		
+
+	glm::vec3 color(0.0);
+	if(closest_hit.hit){
+		color = PhongModel(closest_hit.intersection, closest_hit.normal, glm::normalize(-ray.direction), closest_hit.object->getMaterial());
+	}else{
+		color = glm::vec3(0.0, 0.0, 0.0);
+	}
+	return color;
+}
