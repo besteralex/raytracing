@@ -537,3 +537,188 @@ glm::vec3 trace_ray(Ray ray){
 	}
 	return color;
 }
+
+
+/**
+ Function defining the scene
+ */
+
+void sceneDefinition (){
+
+	
+	Material green_diffuse;
+	green_diffuse.ambient = glm::vec3(0.7f, 0.9f, 0.7f);
+	green_diffuse.diffuse = glm::vec3(0.7f, 0.9f, 0.7f);
+
+	Material red_specular;
+	red_specular.ambient = glm::vec3(1.0f, 0.3f, 0.3f);
+	red_specular.diffuse = glm::vec3(1.0f, 0.3f, 0.3f);
+	red_specular.specular = glm::vec3(0.5);
+	red_specular.shininess = 10.0;
+
+	Material blue_specular;
+	blue_specular.ambient = glm::vec3(0.7f, 0.7f, 1.0f);
+	blue_specular.diffuse = glm::vec3(0.7f, 0.7f, 1.0f);
+	blue_specular.specular = glm::vec3(0.6);
+	blue_specular.shininess = 100.0;
+	
+	
+	green_diffuse.ambient = glm::vec3(0.03f, 0.1f, 0.03f);
+	green_diffuse.diffuse = glm::vec3(0.3f, 1.0f, 0.3f);
+
+	red_specular.diffuse = glm::vec3(1.0f, 0.2f, 0.2f);
+	red_specular.ambient = glm::vec3(0.01f, 0.02f, 0.02f);
+	red_specular.specular = glm::vec3(0.5);
+	red_specular.shininess = 10.0;
+
+	blue_specular.ambient = glm::vec3(0.02f, 0.02f, 0.1f);
+	blue_specular.diffuse = glm::vec3(0.2f, 0.2f, 1.0f);
+	blue_specular.specular = glm::vec3(0.6);
+	blue_specular.shininess = 100.0;
+
+	
+	lights.push_back(new Light(glm::vec3(0, 26, 5), glm::vec3(1.0, 1.0, 1.0)));
+	lights.push_back(new Light(glm::vec3(0, 1, 12), glm::vec3(0.1)));
+	lights.push_back(new Light(glm::vec3(0, 5, 1), glm::vec3(0.4)));
+	
+    Material red_diffuse;
+    red_diffuse.ambient = glm::vec3(0.09f, 0.06f, 0.06f);
+    red_diffuse.diffuse = glm::vec3(0.9f, 0.6f, 0.6f);
+        
+    Material blue_diffuse;
+    blue_diffuse.ambient = glm::vec3(0.06f, 0.06f, 0.09f);
+    blue_diffuse.diffuse = glm::vec3(0.6f, 0.6f, 0.9f);
+    objects.push_back(new Plane(glm::vec3(0,-3,0), glm::vec3(0.0,1,0)));
+    objects.push_back(new Plane(glm::vec3(0,1,30), glm::vec3(0.0,0.0,-1.0), green_diffuse));
+    objects.push_back(new Plane(glm::vec3(-15,1,0), glm::vec3(1.0,0.0,0.0), red_diffuse));
+    objects.push_back(new Plane(glm::vec3(15,1,0), glm::vec3(-1.0,0.0,0.0), blue_diffuse));
+    objects.push_back(new Plane(glm::vec3(0,27,0), glm::vec3(0.0,-1,0)));
+    objects.push_back(new Plane(glm::vec3(0,1,-0.01), glm::vec3(0.0,0.0,1.0), green_diffuse));
+	
+
+	Reader reader_bunny = Reader("/Users/alexanderschramm/Downloads/assignment 3 cg/code/meshes/bunny.obj", false);
+	Reader reader_armadillo = Reader("/Users/alexanderschramm/Downloads/assignment 3 cg/code/meshes/armadillo.obj", false);
+	Reader reader_lucy = Reader("/Users/alexanderschramm/Downloads/assignment 3 cg/code/meshes/lucy.obj", false);
+	// dragon file has no usable normals; read indices only and rebuild smooth normals below
+	Reader reader_dragon = Reader("/Users/alexanderschramm/Downloads/bhv_implementation/code/meshes/dragon.obj", false);
+
+	bool render_bunny = false;
+	bool render_armadillo = false;
+	bool render_lucy = false;
+	bool render_dragon = true;
+	glm::vec3 translate_bunny = glm::vec3(0.0f, -3.0f, 8.0f);
+	glm::vec3 translate_armadillo = glm::vec3(-4.0f, -3.0f, 10.0f);
+	glm::vec3 translate_lucy = glm::vec3(4.0f, -3.0f, 10.0f);
+	glm::vec3 translate_dragon = glm::vec3(0.0f, -3.0f, 25.0f);
+	glm::vec3 scale_dragon = glm::vec3(15.0f, 15.0f, 15.0f);
+	float rotate_dragon_y_deg = 50.0f; // adjust to desired rotation
+	float rotate_dragon_y_rad = glm::radians(rotate_dragon_y_deg);
+
+
+	if(render_bunny) {
+	
+		for(size_t face_index = 0; face_index < reader_bunny.vertex_indices.size(); face_index++) {
+			int vertex_index_1 = reader_bunny.vertex_indices[face_index].x;
+			int vertex_index_2 = reader_bunny.vertex_indices[face_index].y;
+			int vertex_index_3 = reader_bunny.vertex_indices[face_index].z;
+			
+			glm::vec3 vertex_1 = reader_bunny.vertices[vertex_index_1] + translate_bunny;
+			glm::vec3 vertex_2 = reader_bunny.vertices[vertex_index_2] + translate_bunny;
+			glm::vec3 vertex_3 = reader_bunny.vertices[vertex_index_3] + translate_bunny;
+
+
+
+			Triangle triangle = Triangle(vertex_1, vertex_2, vertex_3);
+			triangles.push_back(triangle);
+		}
+	}
+
+	if(render_armadillo) {
+		for(size_t face_index = 0; face_index < reader_armadillo.vertex_indices.size(); face_index++) {
+			int vertex_index_1 = reader_armadillo.vertex_indices[face_index].x;
+			int vertex_index_2 = reader_armadillo.vertex_indices[face_index].y;
+			int vertex_index_3 = reader_armadillo.vertex_indices[face_index].z;
+			
+			glm::vec3 vertex_1 = reader_armadillo.vertices[vertex_index_1] + translate_armadillo;
+			glm::vec3 vertex_2 = reader_armadillo.vertices[vertex_index_2] + translate_armadillo;
+			glm::vec3 vertex_3 = reader_armadillo.vertices[vertex_index_3] + translate_armadillo;
+
+			Triangle triangle = Triangle(vertex_1, vertex_2, vertex_3);
+			triangles.push_back(triangle);
+		}
+	}
+
+	if(render_lucy) {
+		for(size_t face_index = 0; face_index < reader_lucy.vertex_indices.size(); face_index++) {
+			int vertex_index_1 = reader_lucy.vertex_indices[face_index].x;
+			int vertex_index_2 = reader_lucy.vertex_indices[face_index].y;
+			int vertex_index_3 = reader_lucy.vertex_indices[face_index].z;
+			
+			glm::vec3 vertex_1 = reader_lucy.vertices[vertex_index_1] + translate_lucy;
+			glm::vec3 vertex_2 = reader_lucy.vertices[vertex_index_2] + translate_lucy;
+			glm::vec3 vertex_3 = reader_lucy.vertices[vertex_index_3] + translate_lucy;
+
+			Triangle triangle = Triangle(vertex_1, vertex_2, vertex_3);
+			triangles.push_back(triangle);
+		}
+	}
+
+	if(render_dragon) {
+		// Smooth normals: compute on transformed vertices
+		std::vector<glm::vec3> transformed_vertices(reader_dragon.vertices.size());
+		for(size_t vertex_index = 0; vertex_index < reader_dragon.vertices.size(); ++vertex_index){
+			transformed_vertices[vertex_index] = rotateY(reader_dragon.vertices[vertex_index] * scale_dragon, rotate_dragon_y_rad) + translate_dragon;
+		}
+		// Average the neighboring face normals to shade the dragon smoothly.
+		std::vector<glm::vec3> accumulated_normals(reader_dragon.vertices.size(), glm::vec3(0.0f));
+		for(size_t face_index = 0; face_index < reader_dragon.vertex_indices.size(); face_index++) {
+			int vertex_index_1 = reader_dragon.vertex_indices[face_index].x;
+			int vertex_index_2 = reader_dragon.vertex_indices[face_index].y;
+			int vertex_index_3 = reader_dragon.vertex_indices[face_index].z;
+
+			glm::vec3 vertex_1 = transformed_vertices[vertex_index_1];
+			glm::vec3 vertex_2 = transformed_vertices[vertex_index_2];
+			glm::vec3 vertex_3 = transformed_vertices[vertex_index_3];
+
+			glm::vec3 face_normal = glm::normalize(glm::cross(vertex_2 - vertex_1, vertex_3 - vertex_1));
+			accumulated_normals[vertex_index_1] += face_normal;
+			accumulated_normals[vertex_index_2] += face_normal;
+			accumulated_normals[vertex_index_3] += face_normal;
+		}
+		for(size_t vertex_index = 0; vertex_index < accumulated_normals.size(); ++vertex_index) {
+			if(glm::length(accumulated_normals[vertex_index]) > 0.0f) {
+				accumulated_normals[vertex_index] = glm::normalize(accumulated_normals[vertex_index]);
+			}
+		}
+
+		for(size_t face_index = 0; face_index < reader_dragon.vertex_indices.size(); face_index++) {
+			int vertex_index_1 = reader_dragon.vertex_indices[face_index].x;
+			int vertex_index_2 = reader_dragon.vertex_indices[face_index].y;
+			int vertex_index_3 = reader_dragon.vertex_indices[face_index].z;
+			
+			glm::vec3 vertex_1 = transformed_vertices[vertex_index_1];
+			glm::vec3 vertex_2 = transformed_vertices[vertex_index_2];
+			
+			glm::vec3 vertex_3 = transformed_vertices[vertex_index_3];
+
+			glm::vec3 normal_1 = accumulated_normals[vertex_index_1];
+			glm::vec3 normal_2 = accumulated_normals[vertex_index_2];
+			glm::vec3 normal_3 = accumulated_normals[vertex_index_3];
+
+			Triangle triangle = Triangle(vertex_1, vertex_2, vertex_3, normal_1, normal_2, normal_3, red_specular);
+			triangles.push_back(triangle);
+		}
+	}
+
+	cout << "Triangles: " << triangles.size() << endl;
+	
+	
+	bvh_root = init_bhv(triangles);
+	
+}
+
+glm::vec3 toneMapping(glm::vec3 intensity){
+	float gamma = 0.5f;
+	float alpha = 12.0f;
+	return glm::clamp(alpha * glm::pow(intensity, glm::vec3(gamma)), glm::vec3(0.0), glm::vec3(1.0));
+}
