@@ -722,3 +722,76 @@ glm::vec3 toneMapping(glm::vec3 intensity){
 	float alpha = 12.0f;
 	return glm::clamp(alpha * glm::pow(intensity, glm::vec3(gamma)), glm::vec3(0.0), glm::vec3(1.0));
 }
+
+int main(int argc, char * argv[]) {
+
+    clock_t render_ticks = clock();
+
+    int width = 1024;
+    int height = 768;
+    float field_of_view = 90;
+
+	sceneDefinition();
+
+    Image image(width,height);
+    vector<glm::vec3> image_values(width*height);
+
+	size_t total_pixels = static_cast<size_t>(width) * static_cast<size_t>(height);
+	size_t processed_pixels = 0;
+	int last_printed_hundredths = -1; // track progress in 0.01% steps
+	std::cout.setf(std::ios::unitbuf); // auto-flush stdout to show progress promptly
+	std::cout << std::fixed << std::setprecision(2);
+	std::cout << "Rendering: 0.00% completed" << std::endl;
+
+    float pixel_size = 2*tan(0.5*field_of_view/180*M_PI)/width;
+    float image_left = -pixel_size * width / 2;
+    float image_top = pixel_size * height / 2;
+
+    for(int pixel_x = 0; pixel_x < width ; pixel_x++) {
+        for(int pixel_y = 0; pixel_y < height ; pixel_y++){
+			glm::vec3 color_sum(0.0f);
+			// 2x2 supersampling (simple grid)
+			for(int sample_x = 0; sample_x < 2; ++sample_x){
+				for(int sample_y = 0; sample_y < 2; ++sample_y){
+					float ray_x = image_left + (pixel_x + (sample_x + 0.5f)/2.0f) * pixel_size;
+					float ray_y = image_top - (pixel_y + (sample_y + 0.5f)/2.0f) * pixel_size;
+					float ray_z = 1.0f;
+
+					glm::vec3 camera_origin(0, 0, 0);
+					glm::vec3 direction(ray_x, ray_y, ray_z);
+					direction = glm::normalize(direction);
+
+					Ray ray(camera_origin, direction);
+					color_sum += toneMapping(trace_ray(ray));
+				}
+			}
+			glm::vec3 final_color = color_sum * 0.25f; // average of 4 samples
+            image.setPixel(pixel_x, pixel_y, final_color);
+			
+			processed_pixels++;
+			double percent = (static_cast<double>(processed_pixels) * 100.0) / static_cast<double>(total_pixels);
+			int percent_hundredths = static_cast<int>(percent * 100); // e.g., 12.34% -> 1234
+			if(percent_hundredths > last_printed_hundredths){
+				cout << "Rendering: " << percent << "% completed" << endl;
+				last_printed_hundredths = percent_hundredths;
+			}
+        }
+	}
+	cout << "Rendering: 100.00% completed" << endl;
+	
+    render_ticks = clock() - render_ticks;
+	cout<<"It took " << ((float)render_ticks)/CLOCKS_PER_SEC<< " seconds to render the image."<< endl;
+    cout<<"I could render at "<< (float)CLOCKS_PER_SEC/((float)render_ticks) << " frames per second."<<endl;
+
+	// Save the image to the requested path, or use result.ppm.
+	if (argc == 2){
+		image.writeImage(argv[1]);
+		std::cout << "Image written to " << argv[1] << std::endl;
+	}else{
+		image.writeImage("./result.ppm");
+		std::cout << "Image written to ./result.ppm" << std::endl;
+	}
+	
+    return 0;
+}
+
